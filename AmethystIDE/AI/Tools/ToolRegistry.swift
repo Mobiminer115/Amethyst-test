@@ -16,7 +16,7 @@ public struct ToolRegistry: Sendable {
     }
 
     public func openAICompatibleSchemas() throws -> [Data] {
-        try tools.map { tool in
+        try tools.values.map { tool in
             let schema: [String: JSONValue] = [
                 "type": .string("function"),
                 "function": .object([
