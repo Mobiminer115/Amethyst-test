@@ -120,6 +120,10 @@ public actor EditProposalSink {
         proposals[id]
     }
 
+    public func proposalIDs() -> [UUID] {
+        Array(proposals.keys)
+    }
+
     public func reject(id: UUID) {
         proposals.removeValue(forKey: id)
     }
