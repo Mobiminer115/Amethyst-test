@@ -11,6 +11,7 @@ public struct OpenAIResponsesProvider: Sendable {
         self.endpoint = endpoint
     }
 
+    @available(macOS 12.0, iOS 15.0, *)
     public func respond(input: [JSONValue], registry: ToolRegistry) async throws -> AgentResponse {
         struct Request: Encodable {
             let model: String
