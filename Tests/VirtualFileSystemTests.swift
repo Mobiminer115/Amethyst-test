@@ -13,12 +13,43 @@ final class VirtualFileSystemTests: XCTestCase {
         let sink = EditProposalSink()
         let tool = EditFileTool(fileSystem: fs, proposalSink: sink)
 
+        let result = try await tool.execute(arguments: [
+            "path": .string("A.swift"),
+            "old_text": .string("1"),
+            "new_text": .string("2")
+        ])
+
+        XCTAssertTrue(result.success)
+        XCTAssertEqual(try await fs.readFile(path: "A.swift"), "let value = 1")
+    }
+
+    func testAcceptProposalMutatesFile() async throws {
+        let fs = VirtualFileSystem(initialFiles: ["A.swift": "let value = 1"])
+        let sink = EditProposalSink()
+        let tool = EditFileTool(fileSystem: fs, proposalSink: sink)
+
         _ = try await tool.execute(arguments: [
             "path": .string("A.swift"),
             "old_text": .string("1"),
             "new_text": .string("2")
         ])
 
-        XCTAssertEqual(try await fs.readFile(path: "A.swift"), "let value = 1")
+        let proposal = await sink.proposal(id: (await sink.proposalIDs()).first!)
+        XCTAssertNotNil(proposal)
+        if let proposal { try await sink.accept(id: proposal.id, in: fs) }
+        XCTAssertEqual(try await fs.readFile(path: "A.swift"), "let value = 2")
+    }
+
+    func testToolRegistryContainsExpectedToolSchemas() throws {
+        let fs = VirtualFileSystem()
+        let sink = EditProposalSink()
+        let registry = ToolRegistry(tools: [
+            CreateFileTool(fileSystem: fs),
+            ReadFileTool(fileSystem: fs),
+            EditFileTool(fileSystem: fs, proposalSink: sink)
+        ])
+
+        XCTAssertEqual(Set(registry.allTools().map(\.name)), ["create_file", "read_file", "edit_file"])
+        XCTAssertEqual(registry.openAICompatibleSchemas().count, 3)
     }
 }
