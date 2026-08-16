@@ -5,7 +5,8 @@ final class VirtualFileSystemTests: XCTestCase {
     func testCreateAndReadFile() async throws {
         let fs = VirtualFileSystem()
         try await fs.createFile(path: "Views/LoginView.swift", content: "struct LoginView {}")
-        XCTAssertEqual(try await fs.readFile(path: "Views/LoginView.swift"), "struct LoginView {}")
+        let content = try await fs.readFile(path: "Views/LoginView.swift")
+        XCTAssertEqual(content, "struct LoginView {}")
     }
 
     func testEditProposalDoesNotMutateUntilAccepted() async throws {
@@ -20,7 +21,8 @@ final class VirtualFileSystemTests: XCTestCase {
         ])
 
         XCTAssertTrue(result.success)
-        XCTAssertEqual(try await fs.readFile(path: "A.swift"), "let value = 1")
+        let content = try await fs.readFile(path: "A.swift")
+        XCTAssertEqual(content, "let value = 1")
     }
 
     func testAcceptProposalMutatesFile() async throws {
@@ -34,10 +36,13 @@ final class VirtualFileSystemTests: XCTestCase {
             "new_text": .string("2")
         ])
 
-        let proposal = await sink.proposal(id: (await sink.proposalIDs()).first!)
-        XCTAssertNotNil(proposal)
-        if let proposal { try await sink.accept(id: proposal.id, in: fs) }
-        XCTAssertEqual(try await fs.readFile(path: "A.swift"), "let value = 2")
+        let ids = await sink.proposalIDs()
+        XCTAssertEqual(ids.count, 1)
+        let proposal = try XCTUnwrap(await sink.proposal(id: ids[0]))
+        try await sink.accept(id: proposal.id, in: fs)
+
+        let content = try await fs.readFile(path: "A.swift")
+        XCTAssertEqual(content, "let value = 2")
     }
 
     func testToolRegistryContainsExpectedToolSchemas() throws {
@@ -50,6 +55,6 @@ final class VirtualFileSystemTests: XCTestCase {
         ])
 
         XCTAssertEqual(Set(registry.allTools().map(\.name)), ["create_file", "read_file", "edit_file"])
-        XCTAssertEqual(registry.openAICompatibleSchemas().count, 3)
+        XCTAssertEqual(try registry.openAICompatibleSchemas().count, 3)
     }
 }
